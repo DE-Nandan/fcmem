@@ -1,0 +1,140 @@
+@startuml
+
+skinparam dpi 300
+skinparam classAttributeIconSize 0
+top to bottom direction
+
+package "Domain" {
+
+class User {
+  id
+  userName
+}
+
+class Cohort {
+  id
+  cohortName
+}
+
+class UserSubscription {
+  id
+  startDate
+  expiryDate
+  lockedInPrice
+  subscriptionStatus
+}
+
+class Subscription {
+  id
+  subscriptionName
+  currentPrice
+  subscriptionPlanType
+  version
+}
+
+class UserTier {
+  id
+  tierStatus
+  lastEvaluationDate
+}
+
+class Tier {
+  id
+  tierName
+  priorityLevel
+}
+
+class Benefit {
+  id
+  benefitCode
+  description
+}
+
+class TierBenefit {
+  id
+  configValue
+}
+
+class IdempotencyRecord {
+  idempotencyKey
+  responsePayload
+  createdAt
+}
+
+}
+
+package "Services" {
+
+class MembershipService {
+  subscribeUser()
+  cancelSubscription()
+  changeSubscription()
+  getActiveMembership()
+}
+
+class BenefitService {
+  getUserBenefits()
+}
+
+class TierEvaluationService {
+  evaluateAndUpgradeTier()
+}
+
+}
+
+package "Strategy" {
+
+interface TierEvaluationStrategy {
+  isEligible()
+  grantedTier()
+}
+
+class GoldTierStrategy
+class PlatinumTierStrategy
+
+}
+
+package "Repositories" {
+
+interface UserRepository
+interface SubscriptionRepository
+interface UserSubscriptionRepository
+interface TierRepository
+interface BenefitRepository
+interface TierBenefitRepository
+interface IdempotencyRepository
+
+}
+
+User --> Cohort
+
+User "1" --> "*" UserSubscription
+User "1" --> "*" UserTier
+
+UserSubscription "*" --> "1" Subscription
+
+UserTier "*" --> "1" Tier
+
+Subscription "*" --> "1" Tier : baseTier
+
+Tier "1" --> "*" TierBenefit
+Benefit "1" --> "*" TierBenefit
+
+MembershipService --> UserRepository
+MembershipService --> SubscriptionRepository
+MembershipService --> UserSubscriptionRepository
+MembershipService --> IdempotencyRepository
+
+BenefitService --> UserSubscriptionRepository
+BenefitService --> TierBenefitRepository
+
+TierEvaluationService --> UserSubscriptionRepository
+TierEvaluationService --> SubscriptionRepository
+TierEvaluationService --> TierRepository
+
+TierEvaluationService --> TierEvaluationStrategy
+
+TierEvaluationStrategy <|.. GoldTierStrategy
+TierEvaluationStrategy <|.. PlatinumTierStrategy
+
+@enduml
