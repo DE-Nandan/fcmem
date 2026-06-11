@@ -62,22 +62,23 @@ erDiagram
 ```
 
 
-<table>
-  <tr>
-    <td width="50%" valign="top">
-      <h3>System Architecture</h3>
-      <p>Here is the breakdown of our core entities.</p>
-      <ul>
-        <li><b>UserSubscription:</b> The immutable contract.</li>
-        <li><b>TierBenefit:</b> The dynamic perks mapping.</li>
-        <li><b>Rules Engine:</b> Handles all upgrades.</li>
-      </ul>
-    </td>
-    <td width="50%" valign="top">
-      <img src="./fc_mem.png" alt="Class Diagram" width="100%" />
-    </td>
-  </tr>
-</table>
+<img align="right" width="45%" src="./fc_mem.png" alt="Class Diagram">
+
+### 🗄️ System Architecture & Core Components
+
+The backend is structured using strict separation of concerns, isolating network traffic from business invariants and data persistence.
+
+**1. The Web Layer (Controllers & Idempotency)**
+Traffic enters via `MembershipController` and `UserMembershipController`. This layer acts as a strict boundary. It extracts HTTP headers (like `Idempotency-Key`) and passes them to a Service-level Facade wrapper, immediately rejecting duplicate network requests before they can interact with the core domain.
+
+**2. The Service Layer & Strategy Pattern**
+The heart of the system (`MembershipService`, `BenefitService`) orchestrates the transactions. The tier-upgrade logic is entirely abstracted using the **Strategy Pattern** (`TierEvaluationStrategy`). This allows the system to seamlessly evaluate users based on different metrics (total spend, cohort, or order count) without modifying the core service layer, adhering strictly to the Open/Closed Principle.
+
+**3. The Persistence Layer (Optimized Data Access)**
+Data access is handled by Spring Data JPA with a focus on high-throughput performance. We utilize **`@EntityGraph`** on the `BenefitRepository` to fetch complex, multi-table perk configurations in a single SQL query. This prevents the classic N+1 query performance trap from bottlenecking the checkout engine.
+
+**4. Concurrency & State Management**
+State mutations are strictly controlled. The system utilizes an **Append-Only** ledger for user contracts rather than in-place `UPDATE`s. When state changes occur (like a cancellation or upgrade), old rows are closed and new ones are generated. These mutations are guarded by Hibernate's **Optimistic Locking** (`@Version`) to guarantee zero race conditions under heavy load.
 
 ## 🛠️ Tech Stack
 
